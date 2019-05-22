@@ -1,9 +1,12 @@
 const http = require('http')
+const https = require('https')
 const cheerio = require('cheerio')
 
 function crawlHTML(url){
 	return new Promise((resolve, reject) => {
-		http.get(url, res => {
+		let proxy = http
+		if(/^\s*https:\/\//.test(url)) proxy = https
+		proxy.get(url, res => {
 			let {statusCode} = res
 			if(statusCode !== 200){
 				res.resume()
@@ -18,11 +21,14 @@ function crawlHTML(url){
 	})
 }
 
-crawlHTML('http://www.lssdjt.com').then(parseTodayonHistory).catch(err => {
+// crawlHTML('http://www.lssdjt.com').then(parseTodayonHistory).catch(err => {
 
-})
-crawlHTML('http://wufazhuce.com').then(parseTheOne).catch(err => {
+// })
+// crawlHTML('http://wufazhuce.com').then(parseTheOne).catch(err => {
 
+// })
+crawlHTML('https://jikipedia.com').then(parseJikipedia).catch(err => {
+	console.log(err)
 })
 
 function parseTodayonHistory($){
@@ -62,5 +68,15 @@ function parseTheOne($){
 }
 
 function parseJikipedia($){
-	
+	let range = $('.masonry').children(),
+			random = Math.floor(Math.random() * range.length),
+			selected = range.eq(random).find('.card-content').children('.card-middle'),
+			title, content
+	title = selected.find('.title').text().trim()
+	content = selected.find('.brax-render').text()
+	console.log(title, content)
+	return {
+		title,
+		content
+	}
 }
