@@ -7,9 +7,10 @@ const ejs = require('ejs')
 const nodemailer = require('nodemailer')
 const nodeschedule = require('node-schedule')
 
-function crawlHTML(url){
+function crawlHTML(options){
 	return new Promise((resolve, reject) => {
-		let proxy = http
+		let proxy = http,
+				{url, parserFn} = options
 		if(/^\s*https:\/\//.test(url)) proxy = https
 		proxy.get(url, res => {
 			let {statusCode} = res
@@ -20,7 +21,8 @@ function crawlHTML(url){
 			let chunks = ''
 			res.on('data', chunk => { chunks += chunk })
 			res.on('end', () => {
-				resolve(cheerio.load(chunks))
+				chunks = parserFn(cheerio.load(chunks))
+				resolve(chunks)
 			})
 		})
 	})
@@ -75,14 +77,8 @@ function parseJikipedia($){
 	}
 }
 
-let parser = [parseTodayonHistory, parseTheOne, parseJikipedia],
-		promises = [ 'https://jikipedia.com'].map((item, index) => {
-			return crawlHTML(item)
-		})
-setTimeout(function(){
-	console.log(promises)
-}, 2000)
-http.createServer((request, response) => {
+function runServer(promises){
+	http.createServer((request, response) => {
 	if(urlParser.parse(request.url).pathname !== '/inprocess'){
 		response.statusCode = 404
 		response.statusMessage = 'Not Found'
@@ -102,4 +98,63 @@ http.createServer((request, response) => {
 		.catch(err => {
 			console.log(err)
 		})
-}).listen(9000)
+	}).listen(9000)
+}
+
+function mail(html){
+	mailOptions.html = html
+	return transport.sendMail(mailOptions)
+}
+
+function render(filePath, params){
+	return ejs.renderFile(path.resolve(__dirname, filePath), params)
+}
+
+async function start(){
+	let promises = crawlTarget.map(item => {
+		return crawlHTML(item)
+	})
+	let res = await Promise.all(promises)
+	let html = await render('email.ejs', {
+		history: res[0],
+		theOne: res[1],
+		jikipedia: res[2]
+	})
+	let mailStatus = await mail(html)
+	return mailStatus
+}
+
+function scheduleEmail(){
+	console.log('start schedule')
+	nodeschedule.scheduleJob('0 30 9 * * *', () => {
+		start().catch(err => {
+			console.log(err)
+		})
+	})
+}
+let crawlTarget = [
+			{url: 'http://www.lssdjt.com', parserFn: parseTodayonHistory},
+			{url: 'http://wufazhuce.com', parserFn: parseTheOne},
+			{url: 'https://jikipedia.com', parserFn: parseJikipedia},
+		],
+		//邮件相关配置
+		transport = nodemailer.createTransport({
+			service: 'qq',
+			port: 465,
+			secureConnection: true,
+			auth: {
+				user: 'xxx@qq.com',
+				pass: 'xxxxxx'
+			}
+		}),
+		mailOptions = {
+			from: 'xxx',
+			to: 'xxx@qq.com',
+			subject: 'xxx'
+		}
+scheduleEmail()
+
+
+
+
+
