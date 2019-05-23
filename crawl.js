@@ -1,9 +1,11 @@
 const http = require('http')
 const https = require('https')
+const path = require('path')
+const urlParser = require('url')
 const cheerio = require('cheerio')
 const ejs = require('ejs')
-const path = require('path')
 const nodemailer = require('nodemailer')
+const nodeschedule = require('node-schedule')
 
 function crawlHTML(url){
 	return new Promise((resolve, reject) => {
@@ -23,22 +25,6 @@ function crawlHTML(url){
 		})
 	})
 }
-function
-let parser = [parseTodayonHistory, parseTheOne, parseJikipedia],
-		promises = ['http://www.lssdjt.com', 'http://wufazhuce.com', 'https://jikipedia.com'].map((item, index) => {
-			return crawlHTML(item).then(res => {
-				return parser[index](res)
-			})
-		})
-Promise.all(promises).then(res => {
-	let html = ejs.renderFile(path.resolve(__dirname, 'email.ejs'), {
-		history: res[0],
-		theOne: res[1],
-		jikipedia: res[2]
-	})
-}).catch(err => {
-	console.log(err)
-})
 
 function parseTodayonHistory($){
 	let data = {
@@ -88,3 +74,32 @@ function parseJikipedia($){
 		content
 	}
 }
+
+let parser = [parseTodayonHistory, parseTheOne, parseJikipedia],
+		promises = [ 'https://jikipedia.com'].map((item, index) => {
+			return crawlHTML(item)
+		})
+setTimeout(function(){
+	console.log(promises)
+}, 2000)
+http.createServer((request, response) => {
+	if(urlParser.parse(request.url).pathname !== '/inprocess'){
+		response.statusCode = 404
+		response.statusMessage = 'Not Found'
+		return response.end()
+	}
+	Promise.all(promises)
+		.then(res => {
+			return ejs.renderFile(path.resolve(__dirname, 'email.ejs'), {
+				history: res[0],
+				theOne: res[1],
+				jikipedia: res[2]
+			})
+		})
+		.then(res => {
+			response.end(res)
+		})
+		.catch(err => {
+			console.log(err)
+		})
+}).listen(9000)

@@ -21,7 +21,7 @@
 		}
 		.content {
 			padding: .1rem;
-			text-indent: 1rem;
+			text-indent: .8rem;
 			text-align: left;
 			font-size: .4rem;
 		}
@@ -67,6 +67,13 @@
 		}
 		.history-illustration p {
 			margin-top: .2rem;
+		}
+		.history-date {
+		    font-size: .3rem;
+		    display: inline-block;
+		    padding: 0 .2rem;
+		    background-color: rgba(88, 68, 255, 0.2);
+		    border-radius: 4px;
 		}
 		
 
@@ -174,7 +181,7 @@
 	<div class="seperator"></div>
 	<div class="section today-on-history">
 		<p class="section-title">Today on History</p>
-		<p><%= history.date%></p>
+		<p class="history-date"><%= history.date%></p>
 		<ul class="history-illustration">
 			<% for(let i = 0; i < history.illus.length; i++){ %>
 				<% let curr = history.illus[i] %>
